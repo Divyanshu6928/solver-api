@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi import HTTPException
 from pydantic import BaseModel
 from openai import OpenAI
 import os
@@ -14,8 +15,8 @@ class Request(BaseModel):
 
 @app.post("/solve")
 def solve(req: Request):
-
-    prompt = f"""
+    try:
+        prompt = f"""
 Solve the arithmetic word problem carefully.
 
 Ignore irrelevant numbers.
@@ -32,20 +33,15 @@ Problem:
 {req.problem}
 """
 
-    response = client.chat.completions.create(
-        model="gpt-5.5",
-        messages=[{"role":"user","content":prompt}],
-        response_format={"type":"json_object"}
-    )
+        response = client.chat.completions.create(
+            model="gpt-5.5",
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"}
+        )
 
-    result = json.loads(response.choices[0].message.content)
+        result = json.loads(response.choices[0].message.content)
+        return result
 
-    if (
-        set(result.keys()) != {"reasoning", "answer"}
-        or not isinstance(result["reasoning"], str)
-        or len(result["reasoning"]) < 80
-        or not isinstance(result["answer"], int)
-    ):
-        raise ValueError("Invalid response")
-
-    return result
+    except Exception as e:
+        print(repr(e))
+        raise HTTPException(status_code=500, detail=str(e))
