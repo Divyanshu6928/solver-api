@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+load_dotenv()
 from fastapi import FastAPI
 from fastapi import HTTPException
 from pydantic import BaseModel
@@ -5,7 +7,10 @@ from openai import OpenAI
 import os
 import json
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = OpenAI(
+    api_key=os.getenv("AIPIPE_TOKEN"),
+    base_url="https://aipipe.org/openrouter/v1"
+)
 
 app = FastAPI()
 
@@ -34,10 +39,26 @@ Problem:
 """
 
         response = client.chat.completions.create(
-            model="gpt-5.5",
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"}
-        )
+        model="openai/gpt-4.1-nano",
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "Solve arithmetic word problems carefully. "
+                    "Ignore irrelevant numbers. "
+                    "Return ONLY valid JSON with exactly two keys: "
+                    "'reasoning' and 'answer'. "
+                    "'reasoning' must be at least 80 characters. "
+                    "'answer' must be an integer."
+                )
+            },
+            {
+                "role": "user",
+                "content": req.problem
+            }
+        ],
+        response_format={"type": "json_object"}
+    )
 
         result = json.loads(response.choices[0].message.content)
         return result
